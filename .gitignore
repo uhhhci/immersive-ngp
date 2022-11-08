@@ -1,0 +1,12 @@
+.vscode
+build/
+cmake/
+*.dll
+instant-ngp-old/
+instant-ngp/data/nerf/fox/rgba_slices/
+instant-ngp/data/nerf/lego/
+instant-ngp/data/undefault_nerf_data/
+Benchmark/
+Benchmark/*.meta
+instant-ngp/colmap.db-shm
+instant-ngp/colmap.db-wal

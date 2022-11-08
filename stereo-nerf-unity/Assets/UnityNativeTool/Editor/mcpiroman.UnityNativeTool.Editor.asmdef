@@ -1,0 +1,17 @@
+{
+    "name": "mcpiroman.UnityNativeTool.Editor",
+    "references": [
+        "mcpiroman.UnityNativeTool"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
