@@ -34,7 +34,7 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 
 ## Installation
 
-1. Clone this repository:
+1. Clone this repository: ```git clone --recursive https://github.com/uhhhci/immersive-ngp```
 
 2. Make sure you have all the dependencies for [instant-ngp](https://github.com/NVlabs/instant-ngp) installed before proceed.
 
