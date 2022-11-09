@@ -72,7 +72,21 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 
 4. Adjust DLSS settings, and image resolution as you like. 
 5. Now you can run the scene in Editor :)
-6. Disclaimer: There is currently a small issue with running the scene in Unity Editor with native plugin clean up, you might need to restart the editor when running a new scene. 
+6. Use the joystick of the VR controllers for locomotion. 
+7. Disclaimer: There is currently an issue with running the scene in Unity Editor with native plugin clean up, you might need to restart the editor when running a new scene. 
+
+## Common Questions & Troubleshoot
+
+1. **How to reach good framerate and lower latency**
+
+    Beside having a good GPU, it is highly recommended to turn on DLSS support in Unity, also when building the native plugin. 
+
+    [The instant-ngp commit](https://github.com/NVlabs/instant-ngp/commit/54aba7cfbeaf6a60f29469a9938485bebeba24c3) we use also allows saving aabb cropping in the pre-trained model snapshot. If you adjust the aabb cropping when training the model, it will saved and be loaded in Unity as well. Reducing aabb cropping could reduce the render volume, thus save some computational power. 
+
+2. **Locomotion doesn't work**
+
+    Make sure that SteamVR detects both of your controllers before starting the scenes in the Editors. 
+
 
 ## Roadmap
 
