@@ -62,18 +62,22 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 
 ## Usage for Immersive NERF Rendering
 
-1. Open the stereo-nerf-unity Unity project with Unity 2019.4.29. 
-2. For a quick VR test of your own NERF scene, go to the ```Assets\NERF_NativeRendering\Scenes\XRTest``` scene.
-3. Copy the path to your nerf model, images folder, and transform.json file to the ``` Stereo Nerf Renderer``` in the ```Nerf path``` parameters, as ilustrated below.
+1. For Oculus Quest 2, Lunch Oculus Rift, and connect the headset to the PC via Link Cable, or Air Link. 
+2. Launch SteamVR, make sure that SteamVR detects your headset and controllers. 
+3. Open the stereo-nerf-unity Unity project with Unity 2019.4.29. 
+4. For a quick VR test of your own NERF scene, go to the ```Assets\NERF_NativeRendering\Scenes\XRTest``` scene.
+5. Copy the path to your nerf model, images folder, and transform.json file to the ``` Stereo Nerf Renderer``` in the ```Nerf path``` parameters, as ilustrated below.
    
     <img src=".\images\stereo-nerf-gameobj.PNG"
     alt=".\images\stereo-nerf-gameobj.PNG"
     style="float: center; margin-right: 10px; height:300px;" />
 
-4. Adjust DLSS settings, and image resolution as you like. 
-5. Now you can run the scene in Editor :)
-6. Use the joystick of the VR controllers for locomotion. 
-7. Disclaimer: There is currently an issue with running the scene in Unity Editor with native plugin clean up, you might need to restart the editor when running a new scene. 
+    (Note: it is recommend to generate the model using [this instant-ngp commit](https://github.com/NVlabs/instant-ngp/commit/54aba7cfbeaf6a60f29469a9938485bebeba24c3), or just use the instant-ngp instance included in this repo).
+
+6. Adjust DLSS settings, and image resolution as you like. 
+7. Now you can run the scene in Editor :)
+8. Use the joystick of the VR controllers for locomotion. 
+9. Disclaimer: There is currently an issue with running the scene in Unity Editor with native plugin clean up, you might need to restart the editor when running a new scene. 
 
 ## Common Questions & Troubleshoot
 
@@ -86,7 +90,6 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 2. **Locomotion doesn't work**
 
     Make sure that SteamVR detects both of your controllers before starting the scenes in the Editors. 
-
 
 ## Roadmap
 
