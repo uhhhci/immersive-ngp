@@ -9,25 +9,30 @@ public class StereoNerfRenderer : MonoBehaviour
 
     public int width;
     public int height;
-    public bool use_dlss;
-    public Material left, right;
+    public bool enableDlss;
+    public Material leftMaterial, rightMaterial;
+
     public string nerf_path = "Z:/Code/vrnerf/instant-ngp/data/nerf/fox";
     public Camera XRELeftEyeCamera;
-    // default aabb cropping 
-    public Vector3 aabb_min = new Vector3(-1.5f, -1.5f, -1.5f);
-    public Vector3 aabb_max = new Vector3(2.5f, 2.5f, 2.5f);
+    public float IPD = 0.063f; // here we use the average human IPD.
 
+
+    // aabb cropping settings
+    // TODO: enable dynamics AABB cropping
+    Vector3 aabb_min = new Vector3(-1.5f, -1.5f, -1.5f);
+    Vector3 aabb_max = new Vector3(2.5f, 2.5f, 2.5f);
     static bool has_aabb_updated = true;
 
+    // material & texture management
     Texture2D leftTexture, rightTexture;
     Transform XRRightEyeTransform;
-    float IPD = 0.063f; // here we use the average human IPD.
-
-    static bool already_initalized = false;
     static System.IntPtr leftHandle, rightHandle;
     static int _width, _height;
+
+    static bool already_initalized = false;
     static bool handle_changed = false;
 
+    // camera view and transform management
     static Vector3 left_forwardPos;
     static Vector3 left_upPos;
     static Vector3 left_rightPos;
@@ -54,9 +59,7 @@ public class StereoNerfRenderer : MonoBehaviour
     /// <param name="eventID"> Identifier for the event.</param>
     [MonoPInvokeCallback(typeof(RenderEventDelegate))]
     private static void RunOnRenderThread(int eventID) {
-        // Note we need this function as otherwise the
-        // opengl context is undefined when performing multithreaded rendering
-        // thus resulting in no output
+
         switch (eventID)
         {
             case INIT_EVENT:
@@ -68,18 +71,15 @@ public class StereoNerfRenderer : MonoBehaviour
             case DRAW_EVENT:
 
 
-                // here we need a view matrix: https://forum.unity.com/threads/view-matrix-explanation.1198456/
-
-
                 float[] camera_matrix_LEFT = new float[3 * 4] {
-                    -left_rightPos.x,    -left_rightPos.y,    -left_rightPos.z,
+                    left_rightPos.x,    left_rightPos.y,    left_rightPos.z,
                     left_upPos.x,       left_upPos.y,       left_upPos.z,
                     left_forwardPos.x,  left_forwardPos.y,  left_forwardPos.z,
                     left_positionPos.x, left_positionPos.y, left_positionPos.z
                 };
 
                 float[] camera_matrix_RIGHT = new float[3 * 4] {
-                   - right_rightPos.x,    -right_rightPos.y,    -right_rightPos.z,
+                    right_rightPos.x,    right_rightPos.y,    right_rightPos.z,
                     right_upPos.x,       right_upPos.y,       right_upPos.z,
                     right_forwardPos.x,  right_forwardPos.y,  right_forwardPos.z,
                     right_positionPos.x, right_positionPos.y, right_positionPos.z
@@ -101,9 +101,7 @@ public class StereoNerfRenderer : MonoBehaviour
         }
     }
 
-    void OnEnable() {
-        // desyMensa scene aabb cropping:
-       
+    void OnEnable() {       
 
         if (already_initalized)
             return;
@@ -113,7 +111,7 @@ public class StereoNerfRenderer : MonoBehaviour
             Debug.LogWarning(nerf_path + " not found");
         }
 
-        NerfRendererPlugin.initialize(nerf_path, nerf_path + "/base.msgpack", use_dlss);
+        NerfRendererPlugin.initialize(nerf_path, nerf_path + "/base.msgpack", enableDlss);
         _width = width;
         _height = height;
 
@@ -122,15 +120,15 @@ public class StereoNerfRenderer : MonoBehaviour
         GL.InvalidateState();
     }
 
-    void OnDestroy() {
+    void OnDestroy()
+    {
 
         GL.IssuePluginEvent(RenderThreadHandlePtr, DEINIT_EVENT);
         GL.InvalidateState();
         Debug.Log("Deinitialize Texture");
 
-        // this clean up is not enough for unity, as unity still occupy the dll resources unless restarting the editor.
+        // TODO: cleanup native plugin properly.
         // https://answers.unity.com/questions/1425847/native-plugin-cleanup.html
-        // Solution: https://github.com/forrestthewoods/fts_unity_native_plugin_reloader
     }
 
     void Update()
@@ -147,12 +145,9 @@ public class StereoNerfRenderer : MonoBehaviour
         right_upPos = XRRightEyeTransform.transform.up;
         right_rightPos = XRRightEyeTransform.transform.right;
         
+        // TODO: enable dynamics AABB cropping
         if (!has_aabb_updated)
         {
-            // desy mensa cropping
-            //aabb_min = new Vector3(-0.408f, -0.024f, -2.422f);
-            //aabb_max = new Vector3(1.455f, 1.354f, 0.726f);
-
             NerfRendererPlugin.update_aabb_crop(new float[3] {aabb_min.x, aabb_min.y, aabb_min.z}, new float[3] {aabb_max.x, aabb_max.y, aabb_max.z});
             has_aabb_updated = true;
         }
@@ -160,10 +155,10 @@ public class StereoNerfRenderer : MonoBehaviour
         if (handle_changed) {
             Debug.Log("Enable Texture");
             rightTexture = Texture2D.CreateExternalTexture(_width, _height, TextureFormat.RGBAFloat, false, true, rightHandle);
-            right.mainTexture = rightTexture;
+            rightMaterial.mainTexture = rightTexture;
 
             leftTexture = Texture2D.CreateExternalTexture(_width, _height, TextureFormat.RGBAFloat, false, true, leftHandle);
-            left.mainTexture = leftTexture;
+            leftMaterial.mainTexture = leftTexture;
 
             handle_changed = false;
         }

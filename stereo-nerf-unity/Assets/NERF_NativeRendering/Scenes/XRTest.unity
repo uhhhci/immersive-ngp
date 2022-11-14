@@ -428,13 +428,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   width: 1000
   height: 1000
-  use_dlss: 1
-  left: {fileID: 2100000, guid: 80edcfaa597c4964aa8f6b19ec24dacc, type: 2}
-  right: {fileID: 2100000, guid: a5e636fc71d419942b6fd183413a703b, type: 2}
-  nerf_path: C:\Users\keli9\Code\NERFUnity\vrnerf\instant-ngp\data\nerf\fox
+  enableDlss: 1
+  LeftImagePlane: {fileID: 2111800893}
+  RightImagePlane: {fileID: 1540692005}
+  leftMaterial: {fileID: 2100000, guid: 80edcfaa597c4964aa8f6b19ec24dacc, type: 2}
+  rightMaterial: {fileID: 2100000, guid: a5e636fc71d419942b6fd183413a703b, type: 2}
+  nerf_path: C:\Users\keli9\Code\immersive-ngp\instant-ngp\data\nerf\fox
   XRELeftEyeCamera: {fileID: 1391300522}
-  aabb_min: {x: -0.389, y: -0.146, z: -1.009}
-  aabb_max: {x: 1.38, y: 1.359, z: 0.736}
+  IPD: 0.063
 --- !u!4 &832640485
 Transform:
   m_ObjectHideFlags: 0
@@ -598,13 +599,13 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1540692005}
-  m_LocalRotation: {x: 0, y: -1, z: 0, w: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0.1705}
   m_LocalScale: {x: 0.1656029, y: 0.1656029, z: 1}
   m_Children: []
   m_Father: {fileID: 1753345369}
   m_RootOrder: 1
-  m_LocalEulerAnglesHint: {x: 0, y: -180, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0.04688266, y: -0.00366}
@@ -860,13 +861,13 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2111800893}
-  m_LocalRotation: {x: 0, y: -1, z: 0, w: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0.1705}
   m_LocalScale: {x: 0.1656029, y: 0.1656029, z: 1}
   m_Children: []
   m_Father: {fileID: 1753345369}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 0, y: -180, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: -0.01609323, y: -0.00366}

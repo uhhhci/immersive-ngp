@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: RightEyeDynamicTunneling
-  m_Shader: {fileID: 4800000, guid: 8db910058682fce4aafca8da6dc2cac1, type: 3}
+  m_Name: LeftDynamicTunneling
+  m_Shader: {fileID: 4800000, guid: 86f2f9bd932b0df4f9de9ce661687850, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -77,7 +77,7 @@ Material:
     - _SrcBlend: 1
     - _Transparency: 0.5
     - _UVSec: 0
-    - _Visibility: 10
+    - _Visibility: 1.7
     - _ZWrite: 1
     m_Colors:
     - _0123: {r: 0, g: 0, b: 0, a: 0}
