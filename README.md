@@ -28,9 +28,9 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 * Unity 2019.4.29 ( Use the legacy XR manager for compatibility with OpenVR)
 * [instant-ngp](https://github.com/NVlabs/instant-ngp)
 * Unity OpenVR desktop plugin && SteamVR
-* Microsoft Mixed Reality Toolkit MRTK 2.8 
+* Microsoft Mixed Reality Toolkit MRTK 2.8 (optional)
 * OpenGL Graphics API
-* Current version of the repository was tested on Windows 10, and Oculus Quest 2. 
+* Current version of the repository was tested on Windows 10, Windows 11, using a Oculus Quest 2. 
 
 ## Installation
 
@@ -61,12 +61,16 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 5. Now instant-ngp can be loaded as native plugins via Unity.
 
 ## Usage for Immersive NERF Rendering
-
 1. For Oculus Quest 2, Lunch Oculus Rift, and connect the headset to the PC via Link Cable, or Air Link. 
 2. Launch SteamVR, make sure that SteamVR detects your headset and controllers. 
-3. Open the stereo-nerf-unity Unity project with Unity 2019.4.29. 
-4. For a quick VR test of your own NERF scene, go to the ```Assets\NERF_NativeRendering\Scenes\XRTest``` scene.
-5. Copy the path to your nerf model, images folder, and transform.json file to the ``` Stereo Nerf Renderer``` in the ```Nerf path``` parameters, as ilustrated below.
+3. For a quick demo train a model using the fox scene via:
+   ```
+   build\testbed.exe --scene ..\data\nerf\fox
+   ```
+   and safe a snapshot of the instant-ngp model through Instant-ngp > Snapshot > Save 
+5. Open the stereo-nerf-unity Unity project with Unity 2019.4.29. 
+6. For a quick VR test of your own NERF scene, go to the ```Assets\NERF_NativeRendering\Scenes\XRTest``` scene.
+7. Copy the path to your nerf model, images folder, and transform.json file to the ``` Stereo Nerf Renderer``` in the ```Nerf path``` parameters, as ilustrated below.
    
     <img src=".\images\stereo-nerf-gameobj.PNG"
     alt=".\images\stereo-nerf-gameobj.PNG"
