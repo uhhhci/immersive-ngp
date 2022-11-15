@@ -28,7 +28,7 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 * Unity 2019.4.29 ( Use the legacy XR manager for compatibility with OpenVR)
 * [instant-ngp](https://github.com/NVlabs/instant-ngp)
 * Unity OpenVR desktop plugin && SteamVR
-* Microsoft Mixed Reality Toolkit MRTK 2.8 (optional)
+* Microsoft Mixed Reality Toolkit MRTK 2.8 (already included in the Unity project)
 * OpenGL Graphics API
 * Current version of the repository was tested on Windows 10, Windows 11, using a Oculus Quest 2. 
 
@@ -56,7 +56,7 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 
     <img src=".\images\plugin-files.PNG"
     alt="plugin-files.PNG"
-    style="float: center; margin-right: 10px; height:200px;" />
+    style="float: center; margin-right: 10px; height:150px;" />
 
 5. Now instant-ngp can be loaded as native plugins via Unity.
 
@@ -81,7 +81,7 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 6. Adjust DLSS settings, and image resolution as you like. 
 7. Now you can run the scene in Editor :)
 8. Use the joystick of the VR controllers for locomotion. 
-9. Disclaimer: There is currently an issue with running the scene in Unity Editor with native plugin clean up, you might need to restart the editor when running a new scene. 
+9.  Disclaimer: There is currently an issue with running the scene in Unity Editor with native plugin clean up, you might need to restart the editor when running a new scene. 
 
 ## Common Questions & Troubleshoot
 
@@ -91,9 +91,18 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 
     [The instant-ngp commit](https://github.com/NVlabs/instant-ngp/commit/54aba7cfbeaf6a60f29469a9938485bebeba24c3) we use also allows saving aabb cropping in the pre-trained model snapshot. If you adjust the aabb cropping when training the model, it will saved and be loaded in Unity as well. Reducing aabb cropping could reduce the render volume, thus save some computational power. 
 
-2. **Locomotion doesn't work**
+2. **Locomotion doesn't work.**
 
     Make sure that SteamVR detects both of your controllers before starting the scenes in the Editors. 
+
+3. **How to change the FoV the image frame.**
+    
+    You can customize the FoV or aspect ratio of the stereo NERF image plane by modifying the x and y scale of the ```NERFLeft Image``` and the ```NERFRight Image``` game object. (Make sure to adjust both at the same time).
+
+    <img src=".\images\stereo-aspect-ratio-adjustment.PNG"
+    alt=".\images\stereo-nerf-gameobj.PNG"
+    style="float: center; margin-right: 10px; height:200px;" />
+
 
 ## Roadmap
 
@@ -105,6 +114,11 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 * Support for higher Unity Version
 * Real-time SLAM capture for dynamic grow dataset
 
+
+## Contributions
+
+We welcome community contributions to this repository. 
+
 ## Thanks
 
 Many thanks to the authors of these open-source repositories:
@@ -112,7 +126,7 @@ Many thanks to the authors of these open-source repositories:
 1. [instant-ngp](https://github.com/NVlabs/instant-ngp)
 2. [Unity Volume Rendering](https://github.com/mlavik1/UnityVolumeRendering)
 3. [Mixed Reality Toolkit](https://github.com/microsoft/MixedRealityToolkit-Unity)
-4. [Unity Native Plugin Reloader](https://github.com/forrestthewoods/fts_unity_native_plugin_reloader)
+4. [Unity Native Tool](https://github.com/mcpiroman/UnityNativeTool)
 
 ## Authors
 
@@ -133,12 +147,12 @@ Contact: ke.li1@desy.de, tim.rolff@uni-hamburg.de
 
 ```bibtex
 @misc{Immersive-NGP,
-  author = {Tim Rolff and Ke Li and Susanne Schmidt and Reinhard Bacher and   Simone Frintrop and Wim Leemans and Frank Steinicke},
+  author = {Tim Rolff and Ke Li and Susanne Schmidt and Reinhard Bacher and Simone Frintrop and Wim Leemans and Frank Steinicke},
   title = {Immersive Neural Graphics Primitives},
   year = {2022},
   publisher = {GitHub},
   journal = {GitHub repository},
-  howpublished = {\url{https://github.com/uhhhci/Immersive-Neural-Graphics-Primitives}},
+  howpublished = {\url{https://github.com/uhhhci/immersive-ngp}},
 }
 ```
 
