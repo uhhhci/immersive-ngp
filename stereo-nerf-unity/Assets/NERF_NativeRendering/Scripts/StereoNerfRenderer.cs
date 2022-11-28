@@ -51,9 +51,9 @@ public class StereoNerfRenderer : MonoBehaviour
     /// <summary> The render thread handle pointer. </summary>
     public static System.IntPtr RenderThreadHandlePtr = Marshal.GetFunctionPointerForDelegate(RenderThreadHandle);
 
-    public const int INIT_EVENT = 0x0001;
-    public const int DRAW_EVENT = 0x0002;
-    public const int DEINIT_EVENT = 0x0003;
+    private const int INIT_EVENT = 0x0001;
+    private const int DRAW_EVENT = 0x0002;
+    private const int DEINIT_EVENT = 0x0003;
 
     /// <summary> Executes the 'on render thread' operation. </summary>
     /// <param name="eventID"> Identifier for the event.</param>
@@ -106,29 +106,40 @@ public class StereoNerfRenderer : MonoBehaviour
         if (already_initalized)
             return;
 
-        already_initalized = true;
-        if (!Directory.Exists(nerf_path) || File.Exists(nerf_path + "/base.msgpack")) {
-            Debug.LogWarning(nerf_path + " not found");
+        if (Directory.Exists(nerf_path) && File.Exists(Path.Combine(nerf_path, "base.msgpack"))) {
+
+            NerfRendererPlugin.initialize(nerf_path, Path.Combine(nerf_path, "base.msgpack"), enableDlss);
+            _width = width;
+            _height = height;
+            GL.IssuePluginEvent(RenderThreadHandlePtr, INIT_EVENT);
+            GL.InvalidateState();
+            already_initalized = true;
+
+        }
+        else
+        {
+            Debug.LogError("nerf model : " + Path.Combine(nerf_path, "base.msgpack") + " not found");
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+         Application.Quit();
+#endif
         }
 
-        NerfRendererPlugin.initialize(nerf_path, nerf_path + "/base.msgpack", enableDlss);
-        _width = width;
-        _height = height;
-
-
-        GL.IssuePluginEvent(RenderThreadHandlePtr, INIT_EVENT);
-        GL.InvalidateState();
     }
 
     void OnDestroy()
     {
+        if (already_initalized)
+        {
+            GL.IssuePluginEvent(RenderThreadHandlePtr, DEINIT_EVENT);
+            GL.InvalidateState();
+            Debug.Log("Deinitialize Texture");
+        }
 
-        GL.IssuePluginEvent(RenderThreadHandlePtr, DEINIT_EVENT);
-        GL.InvalidateState();
-        Debug.Log("Deinitialize Texture");
-
-        // TODO: cleanup native plugin properly.
+        // TODO: cleanup thread and native plugin properly to stop editor freeze afterwards.
         // https://answers.unity.com/questions/1425847/native-plugin-cleanup.html
+        // https://issuetracker.unity3d.com/issues/editor-freezes-at-begin-monomanager-reloadassembly-when-starting-a-scene-after-a-few-times
     }
 
     void Update()

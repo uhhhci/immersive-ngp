@@ -358,7 +358,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &792891717
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -426,12 +426,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 273e2349a62077646a0ca9145f1f1828, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  width: 1000
-  height: 1000
+  width: 800
+  height: 800
   enableDlss: 1
   leftMaterial: {fileID: 2100000, guid: 80edcfaa597c4964aa8f6b19ec24dacc, type: 2}
   rightMaterial: {fileID: 2100000, guid: a5e636fc71d419942b6fd183413a703b, type: 2}
-  nerf_path: C:\Users\keli9\Code\MachineLearning\instant-ngp\data\minion-keli
+  nerf_path: ' '
   XRELeftEyeCamera: {fileID: 1391300522}
   IPD: 0.063
 --- !u!4 &832640485

@@ -106,10 +106,10 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 
 ## Roadmap
 
+* Foveated NERF ( up coming...)
 * Fix Editor restart issue
 * Time-warp algorithm for latency compensation
 * Dynamics Resolution
-* Foveated NERF
 * Support for OpenXR
 * Support for higher Unity Version
 * Real-time SLAM capture for dynamic grow dataset
@@ -128,34 +128,24 @@ Many thanks to the authors of these open-source repositories:
 3. [Mixed Reality Toolkit](https://github.com/microsoft/MixedRealityToolkit-Unity)
 4. [Unity Native Tool](https://github.com/mcpiroman/UnityNativeTool)
 
-## Authors
-
-**\*Ke Li<sup>1, 2</sup>, \* Tim Rolff<sup>1,3</sup>**, Susanne Schmidt <sup>1</sup>,  Reinhard Bacher <sup>2</sup> ,  Simone Frintrop <sup>3</sup> , Wim Leemans <sup>3</sup> , Frank Steinicke <sup>1</sup> 
-
-
-**\*These authors contributed equally to the work.** 
-
-<sup>1</sup>  Human-Computer Interaction Group, Department of Informatics, Universität Hamburg
-
-<sup>2</sup>  Deutsches Elektronen-Synchrotron DESY, Germany
-
-<sup>3</sup> Computer Vision Group, Department of Informatics, Universität Hamburg
-
-Contact: ke.li1@desy.de, tim.rolff@uni-hamburg.de
 
 ## Citations
 
 ```bibtex
-@misc{Immersive-NGP,
-  author = {Tim Rolff and Ke Li and Susanne Schmidt and Reinhard Bacher and Simone Frintrop and Wim Leemans and Frank Steinicke},
-  title = {Immersive Neural Graphics Primitives},
-  year = {2022},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/uhhhci/immersive-ngp}},
-}
+@misc{immersive-ngp,
+      doi = {10.48550/ARXIV.2211.13494},
+      url = {https://arxiv.org/abs/2211.13494},
+      author = {*Li, Ke and *Rolff, Tim and Schmidt, Susanne and Bacher, Reinhard and Frintrop, Simone and Leemans, Wim and Steinicke, Frank},
+      title = {Immersive Neural Graphics Primitives},
+      publisher = {arXiv},
+      year = {2022}}
 ```
+**\*These authors contributed equally to the work.** 
 
+Link to [Arxiv paper]( https://arxiv.org/pdf/2211.13494.pdf)
+
+Contact: ke.li1@desy.de, tim.rolff@uni-hamburg.de
+ 
 ## Acknowledgment
 
 This work was supported by DASHH (Data Science in Hamburg - HELMHOLTZ Graduate School for the Structure of Matter) with the Grant-No. HIDSS-0002, and the German Federal Ministry of Education and Research (BMBF).
