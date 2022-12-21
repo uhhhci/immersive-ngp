@@ -17,12 +17,6 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 
 * Integration with [MRTK 2.8](https://github.com/microsoft/MixedRealityToolkit-Unity) for building mixed reality applications with NERF. 
 
-    * Example: Merging a NERF volume image slices with a CAD model
-
-        <img src=".\images\volume_operation.gif"
-        alt="plugin-files.PNG"
-        style="float: center; margin-right: 10px; height:200px;" />
-
 ## Dependencies
 
 * Unity 2019.4.29 ( Use the legacy XR manager for compatibility with OpenVR)
