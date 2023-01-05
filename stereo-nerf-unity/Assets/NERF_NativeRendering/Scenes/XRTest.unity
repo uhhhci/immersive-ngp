@@ -431,8 +431,9 @@ MonoBehaviour:
   enableDlss: 1
   leftMaterial: {fileID: 2100000, guid: 80edcfaa597c4964aa8f6b19ec24dacc, type: 2}
   rightMaterial: {fileID: 2100000, guid: a5e636fc71d419942b6fd183413a703b, type: 2}
-  nerf_path: ' '
+  nerf_path: 
   XRELeftEyeCamera: {fileID: 1391300522}
+  has_hmd: 1
   IPD: 0.063
 --- !u!4 &832640485
 Transform:

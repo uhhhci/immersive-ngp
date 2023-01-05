@@ -1,4 +1,15 @@
 #pragma once
+#include "Unity/IUnityInterface.h"
+#include "Unity/IUnityGraphics.h"
+
+#ifdef _WIN32
+#  include <GL/gl3w.h>
+#else
+#  include <GL/glew.h>
+#endif
+#include <GLFW/glfw3.h>
+#include "gl/GL.h"
+#include "gl/GLU.h"
 
 #ifdef _MSC_VER
     #define INTERFACE_API __stdcall
@@ -13,21 +24,19 @@
 typedef void (INTERFACE_API* UnityRenderingEvent)(int eventId);
 typedef void (INTERFACE_API* UnityRenderingEventAndData)(int eventId, void* data);
 
-typedef unsigned int UnityTextureID;
+// manipulation utilities
+extern "C" void UNITY_INTERFACE_API unity_nerf_update_aabb_crop(float* min_vec, float* max_vec);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+// graphics events
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_destroy_texture(GLuint handle);
+//extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_initialize(const char* scene, const char* checkpoint, bool use_dlss, int width, int height);
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_deinitialize();
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_deinit_ngx_vulkan();
+extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRenderEventFunc();
+// setters/ getters
 
-EXPORT_API void INTERFACE_API unity_nerf_initialize(const char* scene, const char* checkpoint, bool use_dlss);
-EXPORT_API void INTERFACE_API unity_nerf_deinitialize();
-
-EXPORT_API UnityTextureID INTERFACE_API unity_nerf_create_texture(int width, int height);
-EXPORT_API void INTERFACE_API unity_nerf_update_texture(float* camera_matrix, UnityTextureID handle);
-EXPORT_API void INTERFACE_API unity_nerf_update_aabb_crop(float* min_vec, float* max_vec);
-EXPORT_API void INTERFACE_API unity_nerf_destroy_texture(UnityTextureID handle);
-EXPORT_API void INTERFACE_API unity_nerf_reset_camera();
-
-#ifdef __cplusplus
-}
-#endif
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_set_initialize_values(const char* scene, const char* checkpoint, bool use_dlss, int width, int height);
+extern "C" GLuint UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_get_left_handle();
+extern "C" GLuint UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API  unity_nerf_get_right_handle();
+extern "C" bool UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_get_graphics_init_state();
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API  unity_nerf_update_stereo_view_matrix(float* left, float* right);

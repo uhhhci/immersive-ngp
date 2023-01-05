@@ -70,12 +70,11 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
     alt=".\images\stereo-nerf-gameobj.PNG"
     style="float: center; margin-right: 10px; height:300px;" />
 
-    (Note: it is recommend to generate the model using [this instant-ngp commit](https://github.com/NVlabs/instant-ngp/commit/54aba7cfbeaf6a60f29469a9938485bebeba24c3), or just use the instant-ngp instance included in this repo).
+    (Note: please generate the nerf model using [this instant-ngp commit](https://github.com/NVlabs/instant-ngp/commit/54aba7cfbeaf6a60f29469a9938485bebeba24c3) and above, or just use the instant-ngp instance included in this repo).
 
 6. Adjust DLSS settings, and image resolution as you like. 
 7. Now you can run the scene in Editor :)
 8. Use the joystick of the VR controllers for locomotion. 
-9.  Disclaimer: There is currently an issue with running the scene in Unity Editor with native plugin clean up, you might need to restart the editor when running a new scene. 
 
 ## Common Questions & Troubleshoot
 
@@ -97,16 +96,26 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
     alt=".\images\stereo-nerf-gameobj.PNG"
     style="float: center; margin-right: 10px; height:200px;" />
 
+4. **Is VR headset required to run the demo?**
+    
+    Yes, the main focus of this repository target immersive applications with a VR headset + steamVR. Please feel free to fork this repo and build immersive desktop applications. 
+
+## Updates
+
+2023/01/05: Major refractoring and fixed the issue that editor needs to be restarted on second run.
 
 ## Roadmap
 
-* Foveated NERF ( up coming...)
-* Fix Editor restart issue
-* Time-warp algorithm for latency compensation
-* Dynamics Resolution
-* Support for OpenXR
-* Support for higher Unity Version
-* Real-time SLAM capture for dynamic grow dataset
+* <s>Fix Editor restart issue</s>
+* Foveated NERF : under consturction, coming soon ...
+* Automatic Fov adjutsment: under consturction, coming soon ...
+* Various interaction techniques (egocentric manipulation, etc) : under consturction, coming soon ...
+* Time-warp algorithm for latency compensation: welcome contribution ...
+* Dynamics Resolution: welcome contribution
+* Support for OpenXR: welcome contribution
+* Support for higher Unity Version: welcome contribution
+* Real-time SLAM capture for dynamic grow dataset: welcome contribution
+* .... feature suggestions welcome!
 
 
 ## Contributions

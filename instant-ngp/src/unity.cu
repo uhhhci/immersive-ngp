@@ -1,4 +1,6 @@
 #include "neural-graphics-primitives/unity.h"
+#include "Unity/IUnityInterface.h"
+#include "Unity/IUnityGraphics.h"
 
 #ifdef _WIN32
 #  include <GL/gl3w.h>
@@ -39,6 +41,7 @@
 #include "gl/GLU.h"
 #include <memory>
 
+
 using Texture = std::shared_ptr<ngp::GLTexture>;
 using RenderBuffer = std::shared_ptr<ngp::CudaRenderBuffer>;
 
@@ -46,27 +49,37 @@ struct TextureData {
     TextureData(const Texture& tex, const RenderBuffer& buf, int width, int heigth)
     : surface_texture(tex), render_buffer(buf), width(width), height(height) {
     }
-
+    ~TextureData(){
+        surface_texture.reset();
+        render_buffer.reset();
+    };
     Texture surface_texture;
     RenderBuffer render_buffer;
     int width;
     int height;
 };
-
-static bool already_initalized = false;
-static bool use_dlss = false;
-static UnityTextureID nullHandle;
 static std::shared_ptr<ngp::Testbed> testbed = nullptr;
 static std::unordered_map<GLuint, std::shared_ptr<TextureData>> textures;
 
-extern "C" void unity_nerf_initialize(const char* scene, const char* snapshot, bool dlss) { 
-    if (already_initalized) {
-        std::cout << "Already initalized nerf" << std::endl;
-        return;
-    }
+// flags
+bool graphics_initialized = false;
+bool use_dlss = false;
+static int _width;
+static int _height;
+static GLuint leftHandle;
+static GLuint rightHandle;
+float zero_matrix[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
+float* view_matrix_left;
+float* view_matrix_right;
+
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_set_initialize_values(const char* scene, const char* snapshot, bool dlss, int width, int height){
 
     use_dlss = dlss;
-    already_initalized = true;
+    _width = width;
+    _height = height;
+
+    view_matrix_left = zero_matrix;
+    view_matrix_right = zero_matrix;
 
     testbed = std::make_shared<ngp::Testbed>(
         ngp::ETestbedMode::Nerf,
@@ -77,6 +90,19 @@ extern "C" void unity_nerf_initialize(const char* scene, const char* snapshot, b
         testbed->load_snapshot(
 			snapshot
         );
+    }
+    tlog::info() << "instant ngp testbed created" ;
+
+};
+
+extern "C" bool UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_get_graphics_init_state(){
+    return graphics_initialized;
+}
+// this needs to happen in the render thread
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_initialize_graphics() { 
+    if(graphics_initialized){
+        tlog::info() << "graphics already initialized" ;
+        return;
     }
 
 	if (!glfwInit()) {
@@ -92,34 +118,59 @@ extern "C" void unity_nerf_initialize(const char* scene, const char* snapshot, b
             ngp::vulkan_and_ngx_init();
         }
         catch (std::runtime_error exception) {
+            use_dlss= false;
             std::cout << "Could not initialize vulkan" << std::endl;
         }
     }
+#else
+    use_dlss = false;
 #endif
+    
+    graphics_initialized = true;
+    tlog::info() << "graphics initialized" ;
+
 }
 
-extern "C" void unity_nerf_deinitialize() {
-    
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_deinit_ngx_vulkan(){
 #ifdef NGP_VULKAN    
     if (use_dlss) { 
         ngp::vulkan_and_ngx_destroy();
+        use_dlss = false;
     }
 #endif
-    already_initalized = false;
+}
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_deinitialize() {
+    textures.clear();
+    
+// #ifdef NGP_VULKAN    
+//     if (use_dlss) { 
+//         ngp::vulkan_and_ngx_destroy();
+//         use_dlss = false;
+//     }
+// #endif
     testbed.reset();
     glfwTerminate();
+    leftHandle = 0;
+    rightHandle = 0;
+    view_matrix_left = NULL;
+    view_matrix_right = NULL;
+    graphics_initialized = false;
+    use_dlss = false;
+    tlog::info() << "instant ngp testbed deinitialized" ;
+
 }
 
-extern "C" UnityTextureID unity_nerf_create_texture(int width, int height) {
-    if (!testbed)
+static GLuint UNITY_INTERFACE_API unity_nerf_create_texture(int width, int height) {
+    
+    if (!testbed){
+        tlog::info() << "testbed not found!!" ;
         return 0;
-
-    // gladly ngp already implements gl textures for us
-    // so we just need to call GLTexture to create a new one.
+    }
+    
     auto texture = std::make_shared<ngp::GLTexture>();
     auto buffer = std::make_shared<ngp::CudaRenderBuffer>(texture);
-
     Eigen::Vector2i render_res { width, height }; 
+
 #if defined(NGP_VULKAN)
     if (use_dlss) {
         buffer->enable_dlss({ width, height });
@@ -137,48 +188,88 @@ extern "C" UnityTextureID unity_nerf_create_texture(int width, int height) {
             render_res = buffer->dlss()->clamp_resolution(render_res);
         }
     }
+    else{ buffer->disable_dlss();}
 #endif
 
     buffer->resize(render_res);
 
     GLuint handle = texture->texture();
-    // int* handle_ptr = new int;
-    // *handle_ptr = static_cast<int>(handle);
-
-    textures[texture->texture()] = std::make_shared<TextureData>(
+    textures[handle] = std::make_shared<TextureData>(
         texture,
         buffer,
         width,
         height
     );
-
-    // return the opengl texture handle
-    // But unity fails to find the functions otherwise :/
+    tlog::info() << "GLTexture handle" << handle ;
     return handle;
 }
 
-extern "C" void unity_nerf_update_texture(float* camera_matrix, UnityTextureID handle) {
-    if (!testbed)
-        return;
-
-    // GLuint handle = static_cast<GLuint>(*handle_ptr);
-    auto found = textures.find(handle);
-    if (found == std::end(textures)) {
+void UNITY_INTERFACE_API unity_nerf_update_texture() {
+    if (!testbed){
+        tlog::error() << "testbed not found" ;
         return;
     }
 
-    Eigen::Matrix<float, 3, 4> camera { camera_matrix };
+    auto left = textures.find(leftHandle);
+    auto right = textures.find(rightHandle);
 
-    RenderBuffer render_buffer = found->second->render_buffer;
-    render_buffer->reset_accumulation();
-    testbed->render_frame(camera,//testbed->m_camera,
-                          camera,//testbed->m_camera,
+    if (left == std::end(textures)) {
+        tlog::error() << "left texture handle not found" ;
+        return;
+    }
+    if (right == std::end(textures)) {
+        tlog::error() << "left texture handle not found" ;
+        return;
+    }
+
+    Eigen::Matrix<float, 3, 4> camera_left {view_matrix_left};
+    Eigen::Matrix<float, 3, 4> camera_right {view_matrix_right};
+
+    RenderBuffer render_buffer_left = left->second->render_buffer;
+    RenderBuffer render_buffer_right = right->second->render_buffer;
+
+    render_buffer_left->reset_accumulation();
+    render_buffer_right->reset_accumulation();
+
+    testbed->render_frame(camera_left,//testbed->m_camera,
+                          camera_left,//testbed->m_camera,
                           Eigen::Vector4f::Zero(),
-                          *render_buffer.get(),
+                          *render_buffer_left.get(),
                           true);
+
+    testbed->render_frame(camera_right,//testbed->m_camera,
+                        camera_right,//testbed->m_camera,
+                        Eigen::Vector4f::Zero(),
+                        *render_buffer_right.get(),
+                        true);
 }
 
-extern "C" void unity_nerf_update_aabb_crop(float* min_vec, float* max_vec){
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_destroy_texture(GLuint handle) {
+
+    if (!testbed)
+        return;
+    auto found = textures.find(handle); 
+    if (found == std::end(textures)) {
+        return;
+    } 
+
+    found->second->render_buffer->reset_accumulation();
+    found->second->render_buffer.reset();
+    found->second->surface_texture.reset();
+    found->second.reset();
+    tlog::info() << "GLTexture and render buffer destroyed" ;
+
+}
+
+// utility functions
+
+static void UNITY_INTERFACE_API unity_nerf_reset_camera(){
+    if (!testbed)
+    return;
+    testbed->reset_camera();
+}
+
+extern "C" void UNITY_INTERFACE_API unity_nerf_update_aabb_crop(float* min_vec, float* max_vec){
     if (!testbed)
     return;
 
@@ -189,29 +280,74 @@ extern "C" void unity_nerf_update_aabb_crop(float* min_vec, float* max_vec){
     
 }
 
-extern "C" void unity_nerf_destroy_texture(UnityTextureID handle) {
-    if (!testbed)
-        return;
 
-    // @TODO add warnings and stuff
-    // GLuint handle = static_cast<GLuint>(*handle_ptr);
-    auto found = textures.find(handle); 
-    if (found == std::end(textures)) {
-        return;
-    } 
+const int INIT_EVENT = 0x0001;
+const int DRAW_EVENT = 0x0002;
+const int DEINIT_EVENT = 0x0003;
+const int CREATE_TEX = 0x0004;
+const int DEINIT_VULKAN = 0x0005;
 
-    found->second->surface_texture.reset();
-    found->second->render_buffer.reset();
 
-    found->second.reset();
-    // delete handle_ptr;
+static void UNITY_INTERFACE_API unity_nerf_run_on_render_thread(int eventID)
+{
+
+    switch (eventID)
+    {
+
+        case INIT_EVENT:
+            
+            unity_nerf_initialize_graphics();
+
+            break;
+
+        case CREATE_TEX:
+
+            leftHandle  = unity_nerf_create_texture(_width, _height);
+            rightHandle = unity_nerf_create_texture(_width, _height);
+
+            break;
+
+        case DRAW_EVENT:
+            
+            unity_nerf_update_texture();
+
+            break;
+
+        case DEINIT_EVENT:
+
+            unity_nerf_destroy_texture(leftHandle);
+            unity_nerf_destroy_texture(rightHandle);
+            unity_nerf_deinitialize();
+            break;
+
+        case DEINIT_VULKAN:
+
+            unity_nerf_deinit_ngx_vulkan();
+            break;
+
+    }
 }
 
+// --------------------------------------------------------------------------
+// GetRenderEventFunc, an example function we export which is used to get a rendering event callback function.
 
-// utility functions
+extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRenderEventFunc(){
 
-extern "C" void unity_nerf_reset_camera(){
-    if (!testbed)
-    return;
-    testbed->reset_camera();
+	return unity_nerf_run_on_render_thread;
 }
+
+extern "C" GLuint UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_get_left_handle(){
+    
+    return leftHandle;
+}
+
+extern "C" GLuint UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_get_right_handle(){
+
+    return rightHandle;
+}
+
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API unity_nerf_update_stereo_view_matrix(float* left, float* right){
+    view_matrix_left = left;
+    view_matrix_right = right;
+}
+
