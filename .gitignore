@@ -1,6 +1,5 @@
 .vscode
 build/
-cmake/
 *.dll
 instant-ngp-old/
 instant-ngp/data/nerf/fox/rgba_slices/
