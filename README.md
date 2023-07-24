@@ -28,6 +28,7 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
     style="float: center; margin-right: 10px; height:250px;" />
 
 * NeRF model manipulation, crop-box adjustment, FoV adjustment.
+    <p float="left">
 
     <img src=".\images\manipulate.gif"
     alt="plugin-files.PNG"
@@ -40,9 +41,10 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
     <img src=".\images\FoV.gif"
     alt="plugin-files.PNG"
     style="float: center; margin-right: 10px; height:200px;" />
+    </p>
 
 * NeRF model editing and model saving.
-
+    <p float="left">
     <img src=".\images\editing.gif"
     alt="plugin-files.PNG"
     style="float: left; margin-right: 10px; height:200px;" />
@@ -50,9 +52,10 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
     <img src=".\images\3DNeRFDrawing.gif"
     alt="plugin-files.PNG"
     style="float: center; margin-right: 10px; height:200px;" />
-
+    </p>
 * Depth textures in Unity and depth occlusion effects; AR NeRF. 
-  
+    <p float="left">
+
     <img src=".\images\occlusion.gif"
     alt="plugin-files.PNG"
     style="float: left; margin-right: 10px; height:200px;" />
@@ -60,7 +63,7 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
     <img src=".\images\AR-NeRF.gif"
     alt="plugin-files.PNG"
     style="float: center; margin-right: 10px; height:200px;" />
-
+    </p>
 ## Dependencies
 
 * Unity 2019.4.29 ( Use the legacy XR manager for compatibility with OpenVR)
