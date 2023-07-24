@@ -17,6 +17,50 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 
 * Integration with [MRTK 2.8](https://github.com/microsoft/MixedRealityToolkit-Unity) for building mixed reality applications with NERF. 
 
+    --------------------------------- Upcoming  -----------------------------
+
+    **The related paper is currently under review, the following source code will be published to this repo upon paper acceptance.**
+
+* Checkout our [Magic NeRF Lens paper](https://arxiv.org/abs/2307.09860) to see how we merge a NeRF with a CAD model in VR for viewing large-scale scene with one-to-one real-world scale.
+
+    <img src=".\images\basic-magic-nerf-lens.gif"
+    alt="plugin-files.PNG"
+    style="float: center; margin-right: 10px; height:250px;" />
+
+* NeRF model manipulation, crop-box adjustment, FoV adjustment.
+
+    <img src=".\images\manipulate.gif"
+    alt="plugin-files.PNG"
+    style="float: left; margin-right: 10px; height:200px;" />
+
+    <img src=".\images\crop_box.gif"
+    alt="plugin-files.PNG"
+    style="float: left; margin-right: 10px; height:200px;" />
+
+    <img src=".\images\FoV.gif"
+    alt="plugin-files.PNG"
+    style="float: center; margin-right: 10px; height:200px;" />
+
+* NeRF model editing and model saving.
+
+    <img src=".\images\editing.gif"
+    alt="plugin-files.PNG"
+    style="float: left; margin-right: 10px; height:200px;" />
+
+    <img src=".\images\3DNeRFDrawing.gif"
+    alt="plugin-files.PNG"
+    style="float: center; margin-right: 10px; height:200px;" />
+
+* Depth textures in Unity and depth occlusion effects; AR NeRF. 
+  
+    <img src=".\images\occlusion.gif"
+    alt="plugin-files.PNG"
+    style="float: left; margin-right: 10px; height:200px;" />
+
+    <img src=".\images\AR-NeRF.gif"
+    alt="plugin-files.PNG"
+    style="float: center; margin-right: 10px; height:200px;" />
+
 ## Dependencies
 
 * Unity 2019.4.29 ( Use the legacy XR manager for compatibility with OpenVR)
@@ -88,15 +132,7 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 
     Make sure that SteamVR detects both of your controllers before starting the scenes in the Editors. 
 
-3. **How to change the FoV the image frame.**
-    
-    You can customize the FoV or aspect ratio of the stereo NERF image plane by modifying the x and y scale of the ```NERFLeft Image``` and the ```NERFRight Image``` game object. (Make sure to adjust both at the same time).
-
-    <img src=".\images\stereo-aspect-ratio-adjustment.PNG"
-    alt=".\images\stereo-nerf-gameobj.PNG"
-    style="float: center; margin-right: 10px; height:200px;" />
-
-4. **Is VR headset required to run the demo?**
+3. **Is VR headset required to run the demo?**
     
     Yes, the main focus of this repository target immersive applications with a VR headset + steamVR. Please feel free to fork this repo and build immersive desktop applications. 
 
@@ -104,16 +140,17 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 
 2023/01/05: Major refractoring and fixed the issue that editor needs to be restarted on second run.
 
+2023/07/20: Initial feature releases for NeRF model manipulation, editing, and scene saving.
+
+
 ## Roadmap
 
 * <s>Fix Editor restart issue</s>
 * Foveated NERF : under consturction, coming soon ...
-* Automatic Fov adjutsment: under consturction, coming soon ...
-* Various interaction techniques (egocentric manipulation, etc) : under consturction, coming soon ...
+* <s>Automatic Fov adjutsment</s>
+* <s>Various interaction techniques (egocentric manipulation, etc)</s>
 * Time-warp algorithm for latency compensation: welcome contribution ...
-* Dynamics Resolution: welcome contribution
-* Support for OpenXR: welcome contribution
-* Support for higher Unity Version: welcome contribution
+* Support for OpenXR: This require rewriting the graphics backend to Direct3D11, WIP
 * Real-time SLAM capture for dynamic grow dataset: welcome contribution
 * .... feature suggestions welcome!
 
