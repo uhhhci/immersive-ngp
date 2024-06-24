@@ -19,7 +19,7 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 
 ## Magic NeRF Lens
 
-* Avaliable on the magic-nerf-lens feature branch
+* Now avaliable on the [magic-nerf-lens](https://github.com/uhhhci/immersive-ngp/tree/magic-nerf-lens) feature branch. More update && tutorials to come .. 
 
 * Checkout our [Magic NeRF Lens paper]( https://doi.org/10.3389/frvir.2024.1377245 ) to see how we merge a NeRF with a CAD model in VR for viewing large-scale scene with one-to-one real-world scale.
 
@@ -168,11 +168,9 @@ Many thanks to the authors of these open-source repositories:
       author = {*Li, Ke and *Rolff, Tim and Schmidt, Susanne and Bacher, Reinhard and Frintrop, Simone and Leemans, Wim and Steinicke, Frank},
       title = {Immersive Neural Graphics Primitives},
       publisher = {arXiv},
-      year = {2022}}
+      year = {2022}} (*These authors contributed equally to the work.)
 
 ```
-**\*These authors contributed equally to the work.** 
-
 Contact: ke.li1@desy.de, tim.rolff@uni-hamburg.de
  
 ## Acknowledgment
