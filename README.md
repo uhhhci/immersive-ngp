@@ -17,11 +17,11 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
 
 * Integration with [MRTK 2.8](https://github.com/microsoft/MixedRealityToolkit-Unity) for building mixed reality applications with NERF. 
 
-    --------------------------------- Upcoming  -----------------------------
+## Magic NeRF Lens
 
-    **The related paper is currently under review, the following source code will be published to this repo upon paper acceptance.**
+* Avaliable on the magic-nerf-lens feature branch
 
-* Checkout our [Magic NeRF Lens paper](https://arxiv.org/abs/2307.09860) to see how we merge a NeRF with a CAD model in VR for viewing large-scale scene with one-to-one real-world scale.
+* Checkout our [Magic NeRF Lens paper]( https://doi.org/10.3389/frvir.2024.1377245 ) to see how we merge a NeRF with a CAD model in VR for viewing large-scale scene with one-to-one real-world scale.
 
     <img src=".\images\basic-magic-nerf-lens.gif"
     alt="plugin-files.PNG"
@@ -58,6 +58,7 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
     alt="plugin-files.PNG"
     style="margin-right: 10px; height:200px;" />
     </p>
+
 ## Dependencies
 
 * Unity 2019.4.29 ( Use the legacy XR manager for compatibility with OpenVR)
@@ -133,24 +134,6 @@ In this project, we present immersive NGP, the first open-source VR NERF Unity p
     
     Yes, the main focus of this repository target immersive applications with a VR headset + steamVR. Please feel free to fork this repo and build immersive desktop applications. 
 
-## Updates
-
-2023/01/05: Major refractoring and fixed the issue that editor needs to be restarted on second run.
-
-2023/07/20: Initial feature releases for NeRF model manipulation, editing, and scene saving.
-
-
-## Roadmap
-
-* <s>Fix Editor restart issue</s>
-* Foveated NERF : under consturction, coming soon ...
-* <s>Automatic Fov adjutsment</s>
-* <s>Various interaction techniques (egocentric manipulation, etc)</s>
-* Time-warp algorithm for latency compensation: welcome contribution ...
-* Support for OpenXR: This require rewriting the graphics backend to Direct3D11, WIP
-* Real-time SLAM capture for dynamic grow dataset: welcome contribution
-* .... feature suggestions welcome!
-
 
 ## Contributions
 
@@ -169,6 +152,16 @@ Many thanks to the authors of these open-source repositories:
 ## Citations
 
 ```bibtex
+@ARTICLE{magic-nerf-lens,
+        AUTHOR={Li, Ke  and Schmidt, Susanne  and Rolff, Tim  and Bacher, Reinhard  and Leemans, Wim  and Steinicke, Frank },
+        TITLE={Magic NeRF lens: interactive fusion of neural radiance fields for virtual facility inspection},
+        JOURNAL={Frontiers in Virtual Reality},
+        VOLUME={5},
+        YEAR={2024},
+        URL={https://www.frontiersin.org/journals/virtual-reality/articles/10.3389/frvir.2024.1377245},
+        DOI={10.3389/frvir.2024.1377245},
+        ISSN={2673-4192}}
+
 @misc{immersive-ngp,
       doi = {10.48550/ARXIV.2211.13494},
       url = {https://arxiv.org/abs/2211.13494},
@@ -176,10 +169,9 @@ Many thanks to the authors of these open-source repositories:
       title = {Immersive Neural Graphics Primitives},
       publisher = {arXiv},
       year = {2022}}
+
 ```
 **\*These authors contributed equally to the work.** 
-
-Link to [Arxiv paper]( https://arxiv.org/pdf/2211.13494.pdf)
 
 Contact: ke.li1@desy.de, tim.rolff@uni-hamburg.de
  
