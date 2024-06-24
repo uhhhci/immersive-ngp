@@ -470,6 +470,46 @@ inline NGP_HOST_DEVICE Eigen::Vector2f motion_vector_2d(
 	return prev_pixel - (pixel.cast<float>() + ld_random_pixel_offset(sample_index));
 }
 
+// similar to Unity's Linear01Depth 
+inline NGP_HOST_DEVICE float to_linear_depth(float z, float n, float f) {
+	// View depth outside of the view frustum leads to output outside of [0, 1]
+	z = tcnn::clamp(z, n, f);
+    // Linearly interpolate depth between near and far planes
+    float depth = (z - n) / (f - n);
+    // Clamp depth to [0, 1] range
+    depth = tcnn::clamp(depth, 0.0f, 1.0f);
+
+	return depth;
+}
+
+// simiar to Unity's linearEyeDepth function
+inline NGP_HOST_DEVICE float to_linear_eye_depth(float z, float n, float f) {
+	// Convert z from linear01 depth to linear eye depth
+	z = 2.0f * z - 1.0f;
+	// Calculate linear eye depth
+	float depth = 2.0f * n * f / (f + n - z * (f - n));
+	// Clamp depth to [0, 1] range
+	depth = tcnn::clamp(depth, 0.0f, 1.0f);
+	return depth;
+}
+
+// Maps view-space depth (physical units) in the range [znear, zfar] hyperbolically to
+// the interval [1, 0]. This is the reverse-z-component of "normalized device coordinates",
+// which are commonly used in rasterization, where linear interpolation in screen space
+// has to be equivalent to linear interpolation in real space (which, in turn, is
+// guaranteed by the hyperbolic mapping of depth). This format is commonly found in
+// z-buffers, and hence expected by downstream image processing functions, such as DLSS
+// and VR reprojection.
+
+inline NGP_HOST_DEVICE float to_ndc_depth(float z, float n, float f) {
+	// View depth outside of the view frustum leads to output outside of [0, 1]
+	z = tcnn::clamp(z, n, f);
+
+	float scale = n / (n - f);
+	float bias = -f * scale;
+	return tcnn::clamp((z * scale + bias) / z, 0.0f, 1.0f);
+}
+
 inline NGP_HOST_DEVICE float fov_to_focal_length(int resolution, float degrees) {
 	return 0.5f * (float)resolution / tanf(0.5f * degrees*(float)PI()/180);
 }

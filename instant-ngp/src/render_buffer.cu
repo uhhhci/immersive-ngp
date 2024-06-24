@@ -48,13 +48,16 @@ void CudaSurface2D::free() {
 	m_surface = 0;
 	if (m_array) {
 		cudaFreeArray(m_array);
-		g_total_n_bytes_allocated -= m_size.prod() * sizeof(float4);
+		g_total_n_bytes_allocated -= m_size.prod() * sizeof(float) * m_n_channels;
 	}
 	m_array = nullptr;
+	m_size  = Vector2i::Zero();
+	m_n_channels = 0;
+
 }
 
-void CudaSurface2D::resize(const Vector2i& size) {
-	if (size == m_size) {
+void CudaSurface2D::resize(const Vector2i& size, int n_channels) {
+	if (size == m_size && n_channels == m_n_channels) {
 		return;
 	}
 
@@ -62,16 +65,25 @@ void CudaSurface2D::resize(const Vector2i& size) {
 
 	m_size = size;
 
-	cudaChannelFormatDesc desc = cudaCreateChannelDesc<float4>();
+	cudaChannelFormatDesc desc;
+	switch (n_channels) {
+		case 1: desc = cudaCreateChannelDesc<float>(); break;
+		case 2: desc = cudaCreateChannelDesc<float2>(); break;
+		case 3: desc = cudaCreateChannelDesc<float3>(); break;
+		case 4: desc = cudaCreateChannelDesc<float4>(); break;
+		default: throw std::runtime_error{fmt::format("CudaSurface2D: unsupported number of channels {}", n_channels)};
+	}
 	CUDA_CHECK_THROW(cudaMallocArray(&m_array, &desc, size.x(), size.y(), cudaArraySurfaceLoadStore));
 
-	g_total_n_bytes_allocated += m_size.prod() * sizeof(float4);
+	g_total_n_bytes_allocated += m_size.prod() * sizeof(float) * n_channels;
 
 	struct cudaResourceDesc resource_desc;
 	memset(&resource_desc, 0, sizeof(resource_desc));
 	resource_desc.resType = cudaResourceTypeArray;
 	resource_desc.res.array.array = m_array;
 	CUDA_CHECK_THROW(cudaCreateSurfaceObject(&m_surface, &resource_desc));
+
+	m_n_channels = n_channels;
 }
 
 #ifdef NGP_GUI
@@ -92,14 +104,14 @@ GLuint GLTexture::texture() {
 
 cudaSurfaceObject_t GLTexture::surface() {
 	if (!m_cuda_mapping) {
-		m_cuda_mapping = std::make_unique<CUDAMapping>(texture(), m_size);
+		m_cuda_mapping = std::make_unique<CUDAMapping>(texture(), m_size, m_n_channels);
 	}
 	return m_cuda_mapping->surface();
 }
 
 cudaArray_t GLTexture::array() {
 	if (!m_cuda_mapping) {
-		m_cuda_mapping = std::make_unique<CUDAMapping>(texture(), m_size);
+		m_cuda_mapping = std::make_unique<CUDAMapping>(texture(), m_size, m_n_channels);
 	}
 	return m_cuda_mapping->array();
 }
@@ -189,7 +201,7 @@ static bool is_wsl() {
 #endif
 }
 
-GLTexture::CUDAMapping::CUDAMapping(GLuint texture_id, const Vector2i& size) : m_size{size} {
+GLTexture::CUDAMapping::CUDAMapping(GLuint texture_id, const Vector2i& size, int n_channels) : m_size{size}, m_n_channels{n_channels}{
 	static bool s_is_cuda_interop_supported = !is_wsl();
 	if (s_is_cuda_interop_supported) {
 		cudaError_t err = cudaGraphicsGLRegisterImage(&m_graphics_resource, texture_id, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore);
@@ -202,8 +214,8 @@ GLTexture::CUDAMapping::CUDAMapping(GLuint texture_id, const Vector2i& size) : m
 	if (!s_is_cuda_interop_supported) {
 		// falling back to a regular cuda surface + CPU copy of data
 		m_cuda_surface = std::make_unique<CudaSurface2D>();
-		m_cuda_surface->resize(size);
-		m_data_cpu.resize(m_size.prod() * 4);
+		m_cuda_surface->resize(size, n_channels);
+		m_data_cpu.resize(m_size.prod() * n_channels);
 		return;
 	}
 
@@ -227,7 +239,7 @@ GLTexture::CUDAMapping::~CUDAMapping() {
 }
 
 const float* GLTexture::CUDAMapping::data_cpu() {
-	CUDA_CHECK_THROW(cudaMemcpy2DFromArray(m_data_cpu.data(), m_size.x() * sizeof(float) * 4, array(), 0, 0, m_size.x() * sizeof(float) * 4, m_size.y(), cudaMemcpyDeviceToHost));
+	CUDA_CHECK_THROW(cudaMemcpy2DFromArray(m_data_cpu.data(), m_size.x() * sizeof(float) * m_n_channels, array(), 0, 0, m_size.x() * sizeof(float) * m_n_channels, m_size.y(), cudaMemcpyDeviceToHost));
 	return m_data_cpu.data();
 }
 #endif //NGP_GUI
@@ -583,15 +595,37 @@ __global__ void dlss_splat_kernel(
 	surf2Dwrite(color, surface, x * sizeof(float4), y);
 }
 
+__global__ void depth_splat_kernel(
+	Vector2i resolution,
+	float znear,
+	float zfar,
+	float* __restrict__ depth_buffer,
+	cudaSurfaceObject_t surface
+) {
+	uint32_t x = threadIdx.x + blockDim.x * blockIdx.x;
+	uint32_t y = threadIdx.y + blockDim.y * blockIdx.y;
+
+	if (x >= resolution.x() || y >= resolution.y()) {
+		return;
+	}
+
+	uint32_t idx = x + resolution.x() * y;
+	surf2Dwrite(to_linear_depth(depth_buffer[idx], znear, zfar), surface, x * sizeof(float), y);
+	//surf2Dwrite(depth_buffer[idx], surface, x * sizeof(float), y);
+}
+
 void CudaRenderBuffer::resize(const Vector2i& res) {
 	m_in_resolution = res;
 	m_frame_buffer.enlarge(res.x() * res.y());
 	m_depth_buffer.enlarge(res.x() * res.y());
+	if (m_depth_target) {
+		m_depth_target->resize(res, 1);
+	}
 	m_accumulate_buffer.enlarge(res.x() * res.y());
 
 	Vector2i out_res = m_dlss ? m_dlss->out_resolution() : res;
 	auto prev_out_res = out_resolution();
-	m_surface_provider->resize(out_res);
+	m_surface_provider->resize(out_res, 4);
 
 	if (out_resolution() != prev_out_res) {
 		reset_accumulation();
@@ -661,6 +695,19 @@ void CudaRenderBuffer::tonemap(float exposure, const Array4f& background_color, 
 		const dim3 out_blocks = { div_round_up((uint32_t)out_res.x(), threads.x), div_round_up((uint32_t)out_res.y(), threads.y), 1 };
 		dlss_splat_kernel<<<out_blocks, threads, 0, stream>>>(out_res, m_dlss->output(), surface());
 	}
+}
+
+void CudaRenderBuffer::render_depth( EColorSpace output_color_space, cudaStream_t stream) {
+	assert(m_dlss || out_resolution() == in_resolution());
+
+	auto res = m_dlss ? in_resolution() : out_resolution();
+	const dim3 threads = { 16, 8, 1 };
+	const dim3 blocks = { div_round_up((uint32_t)res.x(), threads.x), div_round_up((uint32_t)res.y(), threads.y), 1 };
+	
+	if (m_depth_target) {
+		depth_splat_kernel<<<blocks, threads, 0, stream>>>(res, 0.1f, 10.0f, depth_buffer(), m_depth_target->surface());
+	}
+	
 }
 
 void CudaRenderBuffer::overlay_image(

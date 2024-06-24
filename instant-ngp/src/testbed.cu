@@ -748,6 +748,14 @@ void Testbed::imgui() {
 				m_render_aabb.min += new_cen - old_cen;
 				m_render_aabb.max += new_cen - old_cen;
 			}
+			if (ImGui::Button("Clear Volume Outside Box")) {
+				accum_reset = true;
+
+				Eigen::Vector3f cen = m_render_aabb_to_local.transpose() * m_render_aabb.center();
+				Eigen::Vector3f radius = m_render_aabb.diag() * 0.5f;
+				erase_volume_density_outside_crop_box( cen, radius.x(), radius.y(), radius.z(), m_render_aabb_to_local , m_stream.get() );
+				// erase_volume_density_outside_crop_box( cen, radius.x, radius.y, radius.z, m_stream.get() );
+			}
 			if (/*m_visualize_unit_cube*/ 1) {
 				if (ImGui::RadioButton("Translate", m_camera_path.m_gizmo_op == ImGuizmo::TRANSLATE))
 					m_camera_path.m_gizmo_op = ImGuizmo::TRANSLATE;
@@ -1426,7 +1434,6 @@ void Testbed::mouse_wheel(Vector2f m, float delta) {
 		m_image.pos = (m_image.pos - m) / scale_factor + m;
 		set_scale(m_scale * scale_factor);
 	}
-
 	reset_accumulation(true);
 }
 
@@ -1454,6 +1461,7 @@ void Testbed::mouse_drag(const Vector2f& rel, int button) {
 				m_camera.block<3,3>(0,0) = rot * m_camera.block<3,3>(0,0);
 			} else {
 				// Turntable
+				//tlog::info()<< "view direction: " << view_dir();
 				auto old_look_at = look_at();
 				set_look_at({0.0f, 0.0f, 0.0f});
 				m_camera = rot * m_camera;
@@ -3061,13 +3069,15 @@ void Testbed::load_snapshot(const std::string& filepath_string) {
 
 		GPUMemory<__half> density_grid_fp16 = snapshot["density_grid_binary"];
 		m_nerf.density_grid.resize(density_grid_fp16.size());
+		m_nerf.density_grid_mask.resize(density_grid_fp16.size());
 
-		parallel_for_gpu(density_grid_fp16.size(), [density_grid=m_nerf.density_grid.data(), density_grid_fp16=density_grid_fp16.data()] __device__ (size_t i) {
+		parallel_for_gpu(density_grid_fp16.size(), [density_grid=m_nerf.density_grid.data(), density_grid_mask=m_nerf.density_grid_mask.data(),  density_grid_fp16=density_grid_fp16.data()] __device__ (size_t i) {
 			density_grid[i] = (float)density_grid_fp16[i];
+			density_grid_mask[i] = (float)density_grid_fp16[i]; 
 		});
 
 		if (m_nerf.density_grid.size() == NERF_GRIDSIZE() * NERF_GRIDSIZE() * NERF_GRIDSIZE() * (m_nerf.max_cascade + 1)) {
-			update_density_grid_mean_and_bitfield(nullptr);
+			update_density_grid_mean_and_bitfield_mask(nullptr);
 		} else if (m_nerf.density_grid.size() != 0) {
 			// A size of 0 indicates that the density grid was never populated, which is a valid state of a (yet) untrained model.
 			throw std::runtime_error{"Incompatible number of grid cascades."};

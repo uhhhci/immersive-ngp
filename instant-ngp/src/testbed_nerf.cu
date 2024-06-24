@@ -643,7 +643,8 @@ __global__ void advance_pos_nerf(
 		}
 
 		dt = calc_dt(t, cone_angle);
-		uint32_t mip = max(min_mip, mip_from_dt(dt, pos));
+		// integrate from instant-ngp commit : df85fe95cb7557705a1a19fb24f1b9608b2c9a73
+		uint32_t mip = max(min_mip, mip_from_pos(pos));
 
 		if (!density_grid || density_grid_occupied_at(pos, density_grid, mip)) {
 			break;
@@ -736,7 +737,8 @@ __global__ void generate_next_nerf_network_inputs(
 			}
 
 			dt = calc_dt(t, cone_angle);
-			uint32_t mip = max(min_mip, mip_from_dt(dt, pos));
+			// integrate from instant-ngp commit : df85fe95cb7557705a1a19fb24f1b9608b2c9a73
+			uint32_t mip = max(min_mip, mip_from_pos(pos));
 
 			if (!density_grid || density_grid_occupied_at(pos, density_grid, mip)) {
 				break;
@@ -2738,6 +2740,26 @@ void Testbed::update_density_grid_mean_and_bitfield(cudaStream_t stream) {
 	}
 }
 
+void Testbed::update_density_grid_mean_and_bitfield_mask(cudaStream_t stream) {
+	const uint32_t n_elements = NERF_GRIDSIZE() * NERF_GRIDSIZE() * NERF_GRIDSIZE();
+
+	size_t size_including_mips = grid_mip_offset(NERF_CASCADES())/8;
+	m_nerf.density_grid_bitfield.enlarge(size_including_mips);
+	m_nerf.density_grid_mean.enlarge(reduce_sum_workspace_size(n_elements));
+
+	CUDA_CHECK_THROW(cudaMemsetAsync(m_nerf.density_grid_mean.data(), 0, sizeof(float), stream));
+	reduce_sum(m_nerf.density_grid.data(), [n_elements] __device__ (float val) { return fmaxf(val, 0.f) / (n_elements); }, m_nerf.density_grid_mean.data(), n_elements, stream);
+	linear_kernel(grid_to_bitfield, 0, stream, n_elements/8 * NERF_CASCADES(), n_elements/8 * (m_nerf.max_cascade + 1), m_nerf.density_grid.data(), m_nerf.density_grid_bitfield.data(), m_nerf.density_grid_mean.data());
+
+	reduce_sum(m_nerf.density_grid_mask.data(), [n_elements] __device__ (float val) { return fmaxf(val, 0.f) / (n_elements); }, m_nerf.density_grid_mean.data(), n_elements, stream);
+	linear_kernel(grid_to_bitfield, 0, stream, n_elements/8 * NERF_CASCADES(), n_elements/8 * (m_nerf.max_cascade + 1), m_nerf.density_grid_mask.data(), m_nerf.density_grid_bitfield.data(), m_nerf.density_grid_mean.data());
+
+
+	for (uint32_t level = 1; level < NERF_CASCADES(); ++level) {
+		linear_kernel(bitfield_max_pool, 0, stream, n_elements/64, m_nerf.get_density_grid_bitfield_mip(level-1), m_nerf.get_density_grid_bitfield_mip(level));
+	}
+}
+
 void Testbed::NerfCounters::prepare_for_training_steps(cudaStream_t stream) {
 	numsteps_counter.enlarge(1);
 	numsteps_counter_compacted.enlarge(1);
@@ -3490,4 +3512,217 @@ int Testbed::find_best_training_view(int default_view) {
 	return bestimage;
 }
 
+__global__ void mark_density_grid_in_sphere_empty_kernel(const uint32_t n_elements, float* density_grid, Vector3f pos, float radius) {
+	const uint32_t i = threadIdx.x + blockIdx.x * blockDim.x;
+	if (i >= n_elements) return;
+
+	// Random position within that cellq
+	uint32_t level = i / NERF_GRID_N_CELLS();
+	uint32_t pos_idx = i % NERF_GRID_N_CELLS();
+
+	uint32_t x = tcnn::morton3D_invert(pos_idx>>0);
+	uint32_t y = tcnn::morton3D_invert(pos_idx>>1);
+	uint32_t z = tcnn::morton3D_invert(pos_idx>>2);
+
+	float cell_radius = scalbnf(SQRT3(), level) / NERF_GRIDSIZE();
+	Vector3f cell_pos = ((Vector3f{(float)x+0.5f, (float)y+0.5f, (float)z+0.5f}) / NERF_GRIDSIZE() - Vector3f::Constant(0.5f)) * scalbnf(1.0f, level) + Vector3f::Constant(0.5f);
+
+	// Disable if the cell touches the sphere (conservatively, by bounding the cell with a sphere)
+	if ((pos - cell_pos).norm() < radius + cell_radius) {
+		//density_grid[i] = 0.0f;
+		density_grid[i] = -1.0f;
+	}
+}
+
+/*Density grid manipulation extension by K.Li*/
+
+__global__ void erase_volume_density_in_box_kernel(const uint32_t n_elements, float* density_grid, Vector3f pos, float box_width, float box_height, float box_length, Eigen::Matrix<float, 3,3> R) {
+	const uint32_t i = threadIdx.x + blockIdx.x * blockDim.x;
+	if (i >= n_elements) return;
+
+	// Random position within that cell
+	uint32_t level = i / NERF_GRID_N_CELLS();
+	uint32_t pos_idx = i % NERF_GRID_N_CELLS();
+
+	uint32_t x = tcnn::morton3D_invert(pos_idx>>0);
+	uint32_t y = tcnn::morton3D_invert(pos_idx>>1);
+	uint32_t z = tcnn::morton3D_invert(pos_idx>>2);
+
+	Vector3f cell_pos = ((Vector3f{(float)x+0.5f, (float)y+0.5f, (float)z+0.5f}) / NERF_GRIDSIZE() - Vector3f::Constant(0.5f)) * scalbnf(1.0f, level) + Vector3f::Constant(0.5f);
+    cell_pos = R * (cell_pos - pos) + pos;
+
+	if (abs(pos(0) - cell_pos(0)) <= box_width  &&
+		abs(pos(1) - cell_pos(1)) <= box_height &&
+		abs(pos(2) - cell_pos(2)) <= box_length) {
+		density_grid[i] = -1.0f;
+	}
+}
+
+__global__ void erase_volume_density_outside_crop_box_kernel(const uint32_t n_elements, float* density_grid, Vector3f pos, float box_width, float box_height, float box_length, Eigen::Matrix<float, 3,3> R) {
+	const uint32_t i = threadIdx.x + blockIdx.x * blockDim.x;
+	if (i >= n_elements) return;
+
+	// Random position within that cell
+	uint32_t level = i / NERF_GRID_N_CELLS();
+	uint32_t pos_idx = i % NERF_GRID_N_CELLS();
+
+	uint32_t x = tcnn::morton3D_invert(pos_idx>>0);
+	uint32_t y = tcnn::morton3D_invert(pos_idx>>1);
+	uint32_t z = tcnn::morton3D_invert(pos_idx>>2);
+	
+	Vector3f cell_pos = ((Vector3f{(float)x+0.5f, (float)y+0.5f, (float)z+0.5f}) / NERF_GRIDSIZE() - Vector3f::Constant(0.5f)) * scalbnf(1.0f, level) + Vector3f::Constant(0.5f);
+    cell_pos = R * (cell_pos - pos) + pos;
+
+	if (abs(pos(0) - cell_pos(0)) <= box_width  &&
+		abs(pos(1) - cell_pos(1)) <= box_height &&
+		abs(pos(2) - cell_pos(2)) <= box_length ) {
+
+		density_grid[i] = 1.0f;
+
+	}else{
+		density_grid[i] = 0.0f;
+	}
+}
+__global__ void mark_all_density_grid_empty_kernel(const uint32_t n_elements, float* density_grid) {
+	const uint32_t i = threadIdx.x + blockIdx.x * blockDim.x;
+	if (i >= n_elements) return;
+	density_grid[i] = -1.0f;
+}
+
+__global__ void reveal_all_masked_density_kernel(const uint32_t n_elements, float* density_grid, float* density_grid_mask) {
+	const uint32_t i = threadIdx.x + blockIdx.x * blockDim.x;
+	if (i >= n_elements) return;
+	if(density_grid_mask[i]!= -1.0f){
+		density_grid[i] = 1.0f;
+	}
+}
+
+__global__ void reveal_volume_density_in_sphere_kernel(const uint32_t n_elements, float* density_grid, float* density_grid_mask, Vector3f pos, float radius) {
+	const uint32_t i = threadIdx.x + blockIdx.x * blockDim.x;
+	if (i >= n_elements) return;
+
+	// Random position within that cellq
+	uint32_t level = i / NERF_GRID_N_CELLS();
+	uint32_t pos_idx = i % NERF_GRID_N_CELLS();
+
+	uint32_t x = tcnn::morton3D_invert(pos_idx>>0);
+	uint32_t y = tcnn::morton3D_invert(pos_idx>>1);
+	uint32_t z = tcnn::morton3D_invert(pos_idx>>2);
+
+	float cell_radius = scalbnf(SQRT3(), level) / NERF_GRIDSIZE();
+	Vector3f cell_pos = ((Vector3f{(float)x+0.5f, (float)y+0.5f, (float)z+0.5f}) / NERF_GRIDSIZE() - Vector3f::Constant(0.5f)) * scalbnf(1.0f, level) + Vector3f::Constant(0.5f);
+
+	// Enable if the cell touches the sphere (conservatively, by bounding the cell with a sphere)
+	// In instant-ngp, the occupancy of the volume is represented as bitfield, with -1 as not occupied, and 1 as occupied, I guess. 
+	if ((pos - cell_pos).norm() < radius + cell_radius && density_grid_mask[i] != -1.0 ) 
+	{
+		density_grid[i] = 1.0f;
+	}
+}
+
+__global__ void reveal_volume_density_in_box_kernel(const uint32_t n_elements, float* density_grid, float* density_grid_mask, Vector3f pos, float box_width, float box_height, float box_length, Eigen::Matrix<float, 3,3> R) {
+	const uint32_t i = threadIdx.x + blockIdx.x * blockDim.x;
+	if (i >= n_elements) return;
+
+	// Random position within that cell
+	uint32_t level = i / NERF_GRID_N_CELLS();
+	uint32_t pos_idx = i % NERF_GRID_N_CELLS();
+
+	uint32_t x = tcnn::morton3D_invert(pos_idx>>0);
+	uint32_t y = tcnn::morton3D_invert(pos_idx>>1);
+	uint32_t z = tcnn::morton3D_invert(pos_idx>>2);
+
+	// float cell_width = scalbnf(SQRT3(), level) / NERF_GRIDSIZE();
+	// float cell_height = scalbnf(SQRT3(), level) / NERF_GRIDSIZE();
+	// float cell_length = scalbnf(SQRT3(), level) / NERF_GRIDSIZE();
+
+	Vector3f cell_pos = ((Vector3f{(float)x+0.5f, (float)y+0.5f, (float)z+0.5f}) / NERF_GRIDSIZE() - Vector3f::Constant(0.5f)) * scalbnf(1.0f, level) + Vector3f::Constant(0.5f);
+    cell_pos = R * (cell_pos - pos) + pos;
+
+	// Enable if the cell touches the box (conservatively, by bounding the cell with a box)
+	// float half_box_width = box_width / 2.0f;
+	// float half_box_height = box_height / 2.0f;
+	// float half_box_length = box_length / 2.0f;
+
+	if (abs(pos(0) - cell_pos(0)) <= box_width  &&
+		abs(pos(1) - cell_pos(1)) <= box_height &&
+		abs(pos(2) - cell_pos(2)) <= box_length &&
+		density_grid_mask[i] != -1.0 ) {
+		density_grid[i] = 1.0f;
+	}
+}
+
+void Testbed::mark_density_grid_in_sphere_empty(const Vector3f& pos, float radius, cudaStream_t stream) {
+	const uint32_t n_elements = NERF_GRID_N_CELLS() * (m_nerf.max_cascade + 1);
+	if (m_nerf.density_grid.size() != n_elements) {
+		return;
+	}
+
+	//linear_kernel(reveal_volume_density_in_sphere_kernel, 0, stream, n_elements, m_nerf.density_grid_bitfield.data(), pos, radius);
+	linear_kernel(mark_density_grid_in_sphere_empty_kernel, 0, stream, n_elements, m_nerf.density_grid.data(), pos, radius);
+	update_density_grid_mean_and_bitfield(stream);
+}
+
+void Testbed::mark_all_density_grid_empty(cudaStream_t stream) {
+	const uint32_t n_elements = NERF_GRID_N_CELLS() * (m_nerf.max_cascade + 1);
+	if (m_nerf.density_grid.size() != n_elements) {
+		return;
+	}
+
+	//linear_kernel(reveal_volume_density_in_sphere_kernel, 0, stream, n_elements, m_nerf.density_grid_bitfield.data(), pos, radius);
+	linear_kernel(mark_all_density_grid_empty_kernel, 0, stream, n_elements, m_nerf.density_grid.data());
+	update_density_grid_mean_and_bitfield(stream);
+}
+
+void Testbed::reveal_all_masked_density(cudaStream_t stream) {
+	const uint32_t n_elements = NERF_GRID_N_CELLS() * (m_nerf.max_cascade + 1);
+	if (m_nerf.density_grid.size() != n_elements) {
+		return;
+	}
+
+	//linear_kernel(reveal_volume_density_in_sphere_kernel, 0, stream, n_elements, m_nerf.density_grid_bitfield.data(), pos, radius);
+	linear_kernel(reveal_all_masked_density_kernel, 0, stream, n_elements, m_nerf.density_grid.data(), m_nerf.density_grid_mask.data());
+	update_density_grid_mean_and_bitfield(stream);
+}
+
+void Testbed::reveal_volume_density_in_sphere(const Vector3f& pos, float radius, cudaStream_t stream) {
+	const uint32_t n_elements = NERF_GRID_N_CELLS() * (m_nerf.max_cascade + 1);
+	if (m_nerf.density_grid.size() != n_elements) {
+		return;
+	}
+
+	//linear_kernel(reveal_volume_density_in_sphere_kernel, 0, stream, n_elements, m_nerf.density_grid_bitfield.data(), pos, radius);
+	linear_kernel(reveal_volume_density_in_sphere_kernel, 0, stream, n_elements, m_nerf.density_grid.data(), m_nerf.density_grid_mask.data(), pos, radius);
+	update_density_grid_mean_and_bitfield(stream);
+}
+
+void Testbed::reveal_volume_density_in_box(const Vector3f& pos,  float box_width, float box_height, float box_length, Eigen::Matrix<float, 3,3> R, cudaStream_t stream) {
+	const uint32_t n_elements = NERF_GRID_N_CELLS() * (m_nerf.max_cascade + 1);
+	if (m_nerf.density_grid.size() != n_elements) {
+		return;
+	}
+
+	linear_kernel(reveal_volume_density_in_box_kernel, 0, stream, n_elements, m_nerf.density_grid.data(), m_nerf.density_grid_mask.data(), pos,  box_width, box_height, box_length, R);
+	update_density_grid_mean_and_bitfield(stream);
+}
+
+void Testbed::erase_volume_density_in_box(const Vector3f& pos,  float box_width, float box_height, float box_length, Eigen::Matrix<float, 3,3> R, cudaStream_t stream) {
+	const uint32_t n_elements = NERF_GRID_N_CELLS() * (m_nerf.max_cascade + 1);
+	if (m_nerf.density_grid.size() != n_elements) {
+		return;
+	}
+
+	linear_kernel(erase_volume_density_in_box_kernel, 0, stream, n_elements, m_nerf.density_grid.data(), pos,  box_width, box_height, box_length, R);
+	update_density_grid_mean_and_bitfield(stream);
+}
+
+void Testbed::erase_volume_density_outside_crop_box(const Vector3f& pos,  float box_width, float box_height, float box_length, Eigen::Matrix<float, 3, 3> R, cudaStream_t stream) {
+	const uint32_t n_elements = NERF_GRID_N_CELLS() * (m_nerf.max_cascade + 1);
+	if (m_nerf.density_grid.size() != n_elements) {
+		return;
+	}
+
+	linear_kernel(erase_volume_density_outside_crop_box_kernel, 0, stream, n_elements, m_nerf.density_grid.data(), pos,  box_width, box_height, box_length, R);
+	update_density_grid_mean_and_bitfield(stream);
+}
 NGP_NAMESPACE_END

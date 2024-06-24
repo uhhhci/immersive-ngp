@@ -326,6 +326,16 @@ public:
 	void generate_training_samples_sdf(Eigen::Vector3f* positions, float* distances, uint32_t n_to_generate, cudaStream_t stream, bool uniform_only);
 	void update_density_grid_nerf(float decay, uint32_t n_uniform_density_grid_samples, uint32_t n_nonuniform_density_grid_samples, cudaStream_t stream);
 	void update_density_grid_mean_and_bitfield(cudaStream_t stream);
+	void update_density_grid_mean_and_bitfield_mask(cudaStream_t stream);
+
+	void mark_density_grid_in_sphere_empty(const Eigen::Vector3f& pos, float radius, cudaStream_t stream);
+	void reveal_volume_density_in_sphere(const Eigen::Vector3f& pos, float radius, cudaStream_t stream);
+	void reveal_volume_density_in_box(const Eigen::Vector3f& pos,  float box_width, float box_height, float box_length, Eigen::Matrix<float, 3, 3> R , cudaStream_t stream);
+	void erase_volume_density_in_box(const Eigen::Vector3f& pos,  float box_width, float box_height, float box_length, Eigen::Matrix<float, 3, 3> R , cudaStream_t stream);
+	void erase_volume_density_outside_crop_box(const Eigen::Vector3f& pos,  float box_width, float box_height, float box_length, Eigen::Matrix<float, 3, 3> R, cudaStream_t stream);
+
+	void mark_all_density_grid_empty(cudaStream_t stream);
+	void reveal_all_masked_density(cudaStream_t stream);
 
 	struct NerfCounters {
 		tcnn::GPUMemory<uint32_t> numsteps_counter; // number of steps each ray took
@@ -631,7 +641,7 @@ public:
 			void reset_camera_extrinsics();
 			void export_camera_extrinsics(const std::string& filename, bool export_extrinsics_in_quat_format = true);
 		} training = {};
-
+		tcnn::GPUMemory<float> density_grid_mask;
 		tcnn::GPUMemory<float> density_grid; // NERF_GRIDSIZE()^3 grid of EMA smoothed densities from the network
 		tcnn::GPUMemory<uint8_t> density_grid_bitfield;
 		uint8_t* get_density_grid_bitfield_mip(uint32_t mip);

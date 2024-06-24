@@ -34,7 +34,7 @@ public:
 	virtual cudaSurfaceObject_t surface() = 0;
 	virtual cudaArray_t array() = 0;
 	virtual Eigen::Vector2i resolution() const = 0;
-	virtual void resize(const Eigen::Vector2i&) = 0;
+	virtual void resize(const Eigen::Vector2i&, int n_channels = 4) = 0;
 };
 
 class CudaSurface2D : public SurfaceProvider {
@@ -50,7 +50,7 @@ public:
 
 	void free();
 
-	void resize(const Eigen::Vector2i& size) override;
+	void resize(const Eigen::Vector2i& size, int n_channels) override;
 
 	cudaSurfaceObject_t surface() override {
 		return m_surface;
@@ -66,6 +66,7 @@ public:
 
 private:
 	Eigen::Vector2i m_size = Eigen::Vector2i::Constant(0);
+	int m_n_channels = 0;
 	cudaArray_t m_array;
 	cudaSurfaceObject_t m_surface;
 };
@@ -113,10 +114,10 @@ public:
 
 	void resize(const Eigen::Vector2i& new_size, int n_channels, bool is_8bit = false);
 
-	void resize(const Eigen::Vector2i& new_size) override {
-		resize(new_size, 4);
+	void resize(const Eigen::Vector2i& new_size, int n_channels) override {
+		
+		resize(new_size, n_channels, false);
 	}
-
 	Eigen::Vector2i resolution() const override {
 		return m_size;
 	}
@@ -124,7 +125,7 @@ public:
 private:
 	class CUDAMapping {
 	public:
-		CUDAMapping(GLuint texture_id, const Eigen::Vector2i& size);
+		CUDAMapping(GLuint texture_id, const Eigen::Vector2i& size,  int n_channels);
 		~CUDAMapping();
 
 		cudaSurfaceObject_t surface() const { return m_cuda_surface ? m_cuda_surface->surface() : m_surface; }
@@ -141,6 +142,7 @@ private:
 		cudaSurfaceObject_t m_surface = {};
 
 		Eigen::Vector2i m_size;
+		int m_n_channels;
 		std::vector<float> m_data_cpu;
 
 		std::unique_ptr<CudaSurface2D> m_cuda_surface;
@@ -159,13 +161,17 @@ private:
 
 class CudaRenderBuffer {
 public:
-	CudaRenderBuffer(const std::shared_ptr<SurfaceProvider>& surf) : m_surface_provider{surf} {}
+	CudaRenderBuffer(const std::shared_ptr<SurfaceProvider>& surf, const std::shared_ptr<SurfaceProvider>& depth = nullptr) : m_surface_provider{surf}, m_depth_target(depth) {}
 
 	CudaRenderBuffer(const CudaRenderBuffer& other) = delete;
 	CudaRenderBuffer(CudaRenderBuffer&& other) = default;
 
 	cudaSurfaceObject_t surface() {
 		return m_surface_provider->surface();
+	}
+
+	cudaSurfaceObject_t depth_surface() {
+		return m_depth_target->surface();
 	}
 
 	Eigen::Vector2i in_resolution() const {
@@ -204,6 +210,8 @@ public:
 
 	void tonemap(float exposure, const Eigen::Array4f& background_color, EColorSpace output_color_space, cudaStream_t stream);
 
+	void render_depth(EColorSpace output_color_space, cudaStream_t stream);
+
 	void overlay_image(
 		float alpha,
 		const Eigen::Array3f& exposure,
@@ -233,6 +241,10 @@ public:
 
 	SurfaceProvider& surface_provider() {
 		return *m_surface_provider;
+	}
+
+	SurfaceProvider& depth_surface_provider() {
+		return *m_depth_target;
 	}
 
 	void set_color_space(EColorSpace color_space) {
@@ -273,7 +285,11 @@ private:
 	tcnn::GPUMemory<float> m_depth_buffer;
 	tcnn::GPUMemory<Eigen::Array4f> m_accumulate_buffer;
 
+	// rgb render target
 	std::shared_ptr<SurfaceProvider> m_surface_provider;
+	// depth render target
+	std::shared_ptr<SurfaceProvider> m_depth_target;
+
 };
 
 NGP_NAMESPACE_END
